@@ -12,4 +12,4 @@ async def update_horoscope():
 
 
 def register(scheduler: AsyncIOScheduler):
-    scheduler.add_job(func=update_horoscope, trigger='cron', hour=8, minute=50)
+    scheduler.add_job(func=update_horoscope, trigger='cron', hour=6, minute=00)
