@@ -6,15 +6,21 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.contrib.fsm_storage.redis import RedisStorage2
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+# Config and DB:
 from core.config import load_config
-from core.filters.admin import Admin
-from core.handlers.admin_start import register as admin_start
-from core.handlers.user_start import register as user_start
-from core.handlers.select_zodiac_sign import register as select_zodiac_sign
-from core.handlers.show_horoscope import register as show_horoscope
-from core.handlers.personal_horoscope import register as personal_horoscope
-from core.data.horoscope import register as horoscope_scheduler
-from core.schedules.horoscope import register as horoscope_notifier_scheduler
+from core.utils.db_api.postgresql import Database
+
+# Middlewares:
+# ---
+
+# Filters:
+# ---
+
+# Handlers:
+from core.handlers.user_command_start import register as user_command_start
+
+# Schedulers:
+# ---
 
 logger = logging.getLogger(__name__)
 
@@ -24,20 +30,15 @@ def register_middlewares(dp: Dispatcher, config):
 
 
 def register_filters(dp: Dispatcher):
-    dp.filters_factory.bind(Admin)
+    pass
 
 
 def register_handlers(dp: Dispatcher):
-    # admin_start(dp=dp)
-    user_start(dp=dp)
-    select_zodiac_sign(dp=dp)
-    show_horoscope(dp=dp)
-    personal_horoscope(dp=dp)
+    user_command_start(dp=dp)
 
 
-def schedulers(scheduler: AsyncIOScheduler, bot: Bot):
-    horoscope_scheduler(scheduler)
-    horoscope_notifier_scheduler(scheduler, bot)
+def schedulers(scheduler: AsyncIOScheduler, bot: Bot, db: Database):
+    pass
 
 
 async def main():
@@ -52,24 +53,14 @@ async def main():
     storage = RedisStorage2() if config.tgbot.use_redis else MemoryStorage()
     bot = Bot(token=config.tgbot.token, parse_mode='HTML')
     dp = Dispatcher(bot=bot, storage=storage)
+    db = Database(loop=dp.loop)
     scheduler = AsyncIOScheduler()
     bot['config'] = config
 
     register_middlewares(dp=dp, config=config)
     register_filters(dp=dp)
     register_handlers(dp=dp)
-    schedulers(scheduler=scheduler, bot=bot)
-    #
-    # try:
-    #     db.create_table_horoscope()
-    #     db.insert_zodiac_signs()
-    # except Exception as err:
-    #     print(err)
-    #
-    # try:
-    #     db.create_table_users()
-    # except Exception as err:
-    #     print(err)
+    schedulers(scheduler=scheduler, bot=bot, db=db)
 
     try:
         scheduler.start()
@@ -78,6 +69,7 @@ async def main():
         await dp.storage.close()
         await dp.storage.wait_closed()
         await bot.session.close()
+
 
 if __name__ == '__main__':
     try:
